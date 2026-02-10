@@ -41,18 +41,21 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Extract version from CHANGELOG
         id: changelog
+        env:
+          CHANGELOG_PATH: ${{ inputs.changelog-path }}
         run: |
           set -euo pipefail
-          VERSION=$(grep -m1 '^\## \[[0-9]' "${{ inputs.changelog-path }}" | sed 's/.*\[\(.*\)\].*/\1/')
+          VERSION=$(grep -m1 '^\## \[[0-9]' "$CHANGELOG_PATH" | sed 's/.*\[\(.*\)\].*/\1/')
 
           if [ -z "$VERSION" ]; then
-            echo "Error: Failed to extract version from ${{ inputs.changelog-path }}" >&2
+            echo "Error: Failed to extract version from $CHANGELOG_PATH" >&2
             exit 1
           fi
 
@@ -71,12 +74,14 @@ jobs:
 
       - name: Extract release notes
         if: steps.changelog.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.changelog.outputs.version }}
+          CHANGELOG_PATH: ${{ inputs.changelog-path }}
         run: |
           set -euo pipefail
-          VERSION="${{ steps.changelog.outputs.version }}"
           VERSION_ESCAPED=$(printf '%s\n' "$VERSION" | sed 's/[.[\*^$()+?{|]/\\&/g')
 
-          NOTES=$(awk "/^## \[$VERSION_ESCAPED\]/{found=1; next} /^## \[/{found=0} found" "${{ inputs.changelog-path }}")
+          NOTES=$(awk "/^## \[$VERSION_ESCAPED\]/{found=1; next} /^## \[/{found=0} found" "$CHANGELOG_PATH")
 
           if [ -z "$NOTES" ]; then
             NOTES="Release v$VERSION"
@@ -88,16 +93,17 @@ jobs:
         if: steps.changelog.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.changelog.outputs.version }}
         run: |
           set -euo pipefail
-          gh release create "v${{ steps.changelog.outputs.version }}" \
-            --title "v${{ steps.changelog.outputs.version }}" \
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
             --notes-file release_notes.md
 
       - name: Create Sentry release
         id: sentry
         if: steps.changelog.outputs.exists == 'false' && inputs.sentry
-        uses: getsentry/action-release@v3
+        uses: getsentry/action-release@dab6548b3c03c4717878099e43782cf5be654289 # v3
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
@@ -114,7 +120,7 @@ jobs:
       - name: Record New Relic deployment marker
         id: newrelic
         if: steps.changelog.outputs.exists == 'false' && inputs.new-relic
-        uses: newrelic/deployment-marker-action@v2.3.0
+        uses: newrelic/deployment-marker-action@8c1d1c009e7ee18ed2bda1e068d59867fdaa91c4 # v2.3.0
         with:
           apiKey: ${{ secrets.NEW_RELIC_API_KEY }}
           guid: ${{ secrets.NEW_RELIC_DEPLOYMENT_ENTITY_GUID }}
@@ -128,4 +134,6 @@ jobs:
 
       - name: Skip release (tag exists)
         if: steps.changelog.outputs.exists == 'true'
-        run: echo "Tag v${{ steps.changelog.outputs.version }} already exists, skipping release creation"
+        env:
+          VERSION: ${{ steps.changelog.outputs.version }}
+        run: echo "Tag v$VERSION already exists, skipping release creation"
