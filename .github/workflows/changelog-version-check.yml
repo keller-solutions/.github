@@ -22,12 +22,14 @@ jobs:
 
       - name: Get PR version
         id: pr
+        env:
+          CHANGELOG_PATH: ${{ inputs.changelog-path }}
         run: |
           set -euo pipefail
-          VERSION=$(grep -m1 '^\## \[[0-9]' "${{ inputs.changelog-path }}" | sed 's/.*\[\(.*\)\].*/\1/')
+          VERSION=$(grep -m1 '^\## \[[0-9]' "$CHANGELOG_PATH" | sed 's/.*\[\(.*\)\].*/\1/')
 
           if [ -z "$VERSION" ]; then
-            echo "::error::Failed to extract version from ${{ inputs.changelog-path }}. Ensure a version entry exists."
+            echo "::error::Failed to extract version from $CHANGELOG_PATH. Ensure a version entry exists."
             exit 1
           fi
 
@@ -46,9 +48,11 @@ jobs:
 
       - name: Get main version
         id: main
+        env:
+          CHANGELOG_PATH: ${{ inputs.changelog-path }}
         run: |
           set -euo pipefail
-          CHANGELOG="main-branch/${{ inputs.changelog-path }}"
+          CHANGELOG="main-branch/$CHANGELOG_PATH"
           if [ -f "$CHANGELOG" ]; then
             VERSION=$(grep -m1 '^\## \[[0-9]' "$CHANGELOG" | sed 's/.*\[\(.*\)\].*/\1/')
             echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -57,10 +61,11 @@ jobs:
           fi
 
       - name: Compare versions
+        env:
+          PR_VERSION: ${{ steps.pr.outputs.version }}
+          MAIN_VERSION: ${{ steps.main.outputs.version }}
         run: |
           set -euo pipefail
-          PR_VERSION="${{ steps.pr.outputs.version }}"
-          MAIN_VERSION="${{ steps.main.outputs.version }}"
 
           echo "PR version: $PR_VERSION"
           echo "Main version: $MAIN_VERSION"
