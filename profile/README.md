@@ -1,15 +1,22 @@
-# Keller Solutions
+<img alt="Keller Solutions" src="https://keller-solutions.com/_astro/keller-solutions.ZBqPqL6y_11O5fJ.svg" width="360">
 
-Building practical software with clear conventions and consistent quality.
+**Digital Solution Architects and Technical Problem Solvers**
 
-## Repositories
+We build bespoke digital solutions that solve real business challenges — from full-stack web applications to data-driven strategy. Learn more at [keller-solutions.com](https://keller-solutions.com).
+
+---
+
+### KS Labs
+
+Active projects from our innovation lab.
 
 | Project | Description |
 |---------|-------------|
-| [kslabs-routecraft](https://github.com/keller-solutions/kslabs-routecraft) | Route planning and optimization |
-| [ks-project-manager](https://github.com/keller-solutions/ks-project-manager) | Slack-powered AI project management |
-| [highlands-radar](https://github.com/keller-solutions/highlands-radar) | Aircraft tracking radar |
-| [kslabs-rosteriq](https://github.com/keller-solutions/kslabs-rosteriq) | Roster management |
-| [airport-code-quest](https://github.com/keller-solutions/airport-code-quest) | Aviation trivia game |
-| [keller-solutions-marketplace](https://github.com/keller-solutions/keller-solutions-marketplace) | Claude Code plugin marketplace |
-| [kslabs-a11y-audit](https://github.com/keller-solutions/kslabs-a11y-audit) | Accessibility auditing tool |
+| [Airport Code Quest](https://airportcode.quest) | Aviation trivia game for pilots and enthusiasts |
+| [RouteCraft](https://www.routecraft.app) | AI-powered trip planning and route optimization |
+
+### Open Source
+
+| Repository | Description |
+|------------|-------------|
+| [kslabs-marketplace](https://github.com/keller-solutions/kslabs-marketplace) | Claude Code plugin marketplace |
