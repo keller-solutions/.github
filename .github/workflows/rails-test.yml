@@ -68,6 +68,10 @@ jobs:
         with:
           bundler-cache: true
 
+      - name: Ensure Node version file
+        if: inputs.node
+        run: test -f .node-version || echo "22" > .node-version
+
       - name: Set up Node.js
         if: inputs.node
         uses: actions/setup-node@v6
