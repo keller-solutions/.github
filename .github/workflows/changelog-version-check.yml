@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Get PR version
         id: pr
@@ -45,6 +47,7 @@ jobs:
         with:
           ref: main
           path: main-branch
+          persist-credentials: false
 
       - name: Get main version
         id: main
