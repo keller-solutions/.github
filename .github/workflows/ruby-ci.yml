@@ -41,7 +41,14 @@ jobs:
 
       - name: Scan for common Rails security vulnerabilities using static analysis
         if: inputs.brakeman
-        run: bin/brakeman --no-pager
+        run: |
+          rc=0
+          bin/brakeman --no-pager || rc=$?
+          if [ $rc -eq 5 ]; then
+            echo "::warning::Brakeman is not the latest version. Consider updating."
+            exit 0
+          fi
+          exit $rc
 
       - name: Scan for known security vulnerabilities in gems used
         if: inputs.bundler-audit
