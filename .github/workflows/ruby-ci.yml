@@ -52,7 +52,13 @@ jobs:
 
       - name: Scan for known security vulnerabilities in gems used
         if: inputs.bundler-audit
-        run: bin/bundler-audit
+        run: |
+          if [ -f bin/bundler-audit ]; then
+            bin/bundler-audit
+          else
+            echo "::error::bin/bundler-audit not found. Add bundler-audit to your Gemfile or set bundler-audit: false."
+            exit 1
+          fi
 
   scan_js:
     name: Security Scan (JS)
