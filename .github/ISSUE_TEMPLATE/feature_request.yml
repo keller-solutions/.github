@@ -1,0 +1,33 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: value
+    attributes:
+      label: In order to...
+      description: What business value does this provide?
+    validations:
+      required: true
+  - type: textarea
+    id: persona
+    attributes:
+      label: As a...
+      description: Who is the user or persona?
+    validations:
+      required: true
+  - type: textarea
+    id: capability
+    attributes:
+      label: I want...
+      description: What capability or feature is needed?
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know this is done?
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2

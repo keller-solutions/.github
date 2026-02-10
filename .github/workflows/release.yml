@@ -1,0 +1,131 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      changelog-path:
+        description: "Path to CHANGELOG.md"
+        required: false
+        type: string
+        default: "CHANGELOG.md"
+      new-relic:
+        description: "Record New Relic deployment marker"
+        required: false
+        type: boolean
+        default: false
+      sentry:
+        description: "Create Sentry release"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      NEW_RELIC_API_KEY:
+        required: false
+      NEW_RELIC_DEPLOYMENT_ENTITY_GUID:
+        required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
+      SENTRY_ORG:
+        required: false
+      SENTRY_PROJECT:
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from CHANGELOG
+        id: changelog
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 '^\## \[[0-9]' "${{ inputs.changelog-path }}" | sed 's/.*\[\(.*\)\].*/\1/')
+
+          if [ -z "$VERSION" ]; then
+            echo "Error: Failed to extract version from ${{ inputs.changelog-path }}" >&2
+            exit 1
+          fi
+
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+            echo "Error: Extracted version '$VERSION' is not a valid semantic version" >&2
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract release notes
+        if: steps.changelog.outputs.exists == 'false'
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.changelog.outputs.version }}"
+          VERSION_ESCAPED=$(printf '%s\n' "$VERSION" | sed 's/[.[\*^$()+?{|]/\\&/g')
+
+          NOTES=$(awk "/^## \[$VERSION_ESCAPED\]/{found=1; next} /^## \[/{found=0} found" "${{ inputs.changelog-path }}")
+
+          if [ -z "$NOTES" ]; then
+            NOTES="Release v$VERSION"
+          fi
+
+          echo "$NOTES" > release_notes.md
+
+      - name: Create GitHub Release
+        if: steps.changelog.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "v${{ steps.changelog.outputs.version }}" \
+            --title "v${{ steps.changelog.outputs.version }}" \
+            --notes-file release_notes.md
+
+      - name: Create Sentry release
+        id: sentry
+        if: steps.changelog.outputs.exists == 'false' && inputs.sentry
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          release: v${{ steps.changelog.outputs.version }}
+        continue-on-error: true
+
+      - name: Warn on Sentry failure
+        if: steps.changelog.outputs.exists == 'false' && inputs.sentry && steps.sentry.outcome == 'failure'
+        run: echo "::warning::Sentry release creation failed. Check Sentry configuration."
+
+      - name: Record New Relic deployment marker
+        id: newrelic
+        if: steps.changelog.outputs.exists == 'false' && inputs.new-relic
+        uses: newrelic/deployment-marker-action@v2.3.0
+        with:
+          apiKey: ${{ secrets.NEW_RELIC_API_KEY }}
+          guid: ${{ secrets.NEW_RELIC_DEPLOYMENT_ENTITY_GUID }}
+          version: v${{ steps.changelog.outputs.version }}
+          user: ${{ github.actor }}
+        continue-on-error: true
+
+      - name: Warn on New Relic failure
+        if: steps.changelog.outputs.exists == 'false' && inputs.new-relic && steps.newrelic.outcome == 'failure'
+        run: echo "::warning::New Relic deployment marker failed. Check New Relic configuration."
+
+      - name: Skip release (tag exists)
+        if: steps.changelog.outputs.exists == 'true'
+        run: echo "Tag v${{ steps.changelog.outputs.version }} already exists, skipping release creation"

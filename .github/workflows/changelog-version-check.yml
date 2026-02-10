@@ -1,0 +1,87 @@
+name: CHANGELOG Version Check
+
+on:
+  workflow_call:
+    inputs:
+      changelog-path:
+        description: "Path to CHANGELOG.md"
+        required: false
+        type: string
+        default: "CHANGELOG.md"
+
+jobs:
+  changelog-version-check:
+    name: CHANGELOG Version Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v6
+
+      - name: Get PR version
+        id: pr
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 '^\## \[[0-9]' "${{ inputs.changelog-path }}" | sed 's/.*\[\(.*\)\].*/\1/')
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::Failed to extract version from ${{ inputs.changelog-path }}. Ensure a version entry exists."
+            exit 1
+          fi
+
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+            echo "::error::Extracted version '$VERSION' is not a valid semantic version"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Checkout main branch
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: main-branch
+
+      - name: Get main version
+        id: main
+        run: |
+          set -euo pipefail
+          CHANGELOG="main-branch/${{ inputs.changelog-path }}"
+          if [ -f "$CHANGELOG" ]; then
+            VERSION=$(grep -m1 '^\## \[[0-9]' "$CHANGELOG" | sed 's/.*\[\(.*\)\].*/\1/')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "version=0.0.0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare versions
+        run: |
+          set -euo pipefail
+          PR_VERSION="${{ steps.pr.outputs.version }}"
+          MAIN_VERSION="${{ steps.main.outputs.version }}"
+
+          echo "PR version: $PR_VERSION"
+          echo "Main version: $MAIN_VERSION"
+
+          version_gt() {
+            test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"
+          }
+
+          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
+            echo "::error::CHANGELOG version ($PR_VERSION) has not been bumped from main ($MAIN_VERSION)"
+            echo ""
+            echo "Please update CHANGELOG.md:"
+            echo "1. Move [Unreleased] changes to a new version section"
+            echo "2. Add the new version with today's date"
+            echo "3. Update comparison links at the bottom"
+            exit 1
+          fi
+
+          if ! version_gt "$PR_VERSION" "$MAIN_VERSION"; then
+            echo "::error::PR version ($PR_VERSION) is not greater than main version ($MAIN_VERSION)"
+            exit 1
+          fi
+
+          echo "Version check passed: $MAIN_VERSION -> $PR_VERSION"

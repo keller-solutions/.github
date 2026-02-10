@@ -1,0 +1,158 @@
+name: Rails Test
+
+on:
+  workflow_call:
+    inputs:
+      database-name:
+        description: "PostgreSQL database name for tests"
+        required: true
+        type: string
+      node:
+        description: "Set up Node.js (reads .node-version or uses default)"
+        required: false
+        type: boolean
+        default: false
+      playwright:
+        description: "Install Playwright browsers"
+        required: false
+        type: boolean
+        default: false
+      system-tests:
+        description: "Run system tests as a separate job"
+        required: false
+        type: boolean
+        default: false
+      qlty-coverage:
+        description: "Upload coverage to Qlty"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      RAILS_TEST_MASTER_KEY:
+        required: false
+      QLTY_COVERAGE_TOKEN:
+        required: false
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ${{ inputs.database-name }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/${{ inputs.database-name }}
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_MASTER_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Set up Node.js
+        if: inputs.node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Node.js dependencies
+        if: inputs.node
+        run: npm ci
+
+      - name: Install Playwright browsers
+        if: inputs.playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Setup database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Run tests
+        run: bin/rails test
+
+      - name: Upload coverage to Qlty
+        if: inputs.qlty-coverage
+        uses: qltysh/qlty-action/coverage@v2
+        with:
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: coverage/.resultset.json
+
+      - name: Keep screenshots from failed system tests
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: screenshots
+          path: ${{ github.workspace }}/tmp/screenshots
+          if-no-files-found: ignore
+
+  system-test:
+    name: System Test
+    runs-on: ubuntu-latest
+    if: inputs.system-tests
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ${{ inputs.database-name }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/${{ inputs.database-name }}
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_MASTER_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Setup database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Run system tests
+        run: bin/rails test:system
+
+      - name: Keep screenshots from failed system tests
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: system-test-screenshots
+          path: ${{ github.workspace }}/tmp/screenshots
+          if-no-files-found: ignore
