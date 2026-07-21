@@ -56,9 +56,12 @@ jobs:
         run: |
           set -euo pipefail
           CHANGELOG="main-branch/$CHANGELOG_PATH"
+          # A repo adopting the check may have a CHANGELOG on main with
+          # no version section yet (only [Unreleased]); treat that like
+          # a missing file rather than letting the grep pipeline fail.
           if [ -f "$CHANGELOG" ]; then
-            VERSION=$(grep -m1 '^\## \[[0-9]' "$CHANGELOG" | sed 's/.*\[\(.*\)\].*/\1/')
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            VERSION=$(grep -m1 '^\## \[[0-9]' "$CHANGELOG" | sed 's/.*\[\(.*\)\].*/\1/' || true)
+            echo "version=${VERSION:-0.0.0}" >> $GITHUB_OUTPUT
           else
             echo "version=0.0.0" >> $GITHUB_OUTPUT
           fi
