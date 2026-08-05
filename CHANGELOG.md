@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Org profile logo pointed at a hashed Astro asset that no longer exists, so the profile page rendered a broken image; now uses the stable `/assets/keller-solutions-logo.svg`
+- ChronoMap link pointed at `evanrkeller.github.io`, which 404s since the repo moved to the org
+- RouteCraft link pointed at `www.routecraft.app` instead of `flyroutecraft.com`
+- Airport Code Quest was described as an "aviation trivia game"; it is a gamified logbook driven by real landings
+
+### Changed
+
+- Profile headline and intro reworded to lead with senior-led delivery
+- KS Labs table now lists all five active products, with descriptions matching keller-solutions.com/labs
+- Open source table now lists all five public repositories
+
 ## [0.1.1] - 2026-02-10
 
 ### Security
