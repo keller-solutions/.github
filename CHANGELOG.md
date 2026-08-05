@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-05
+
 ### Fixed
 
 - Org profile logo pointed at a hashed Astro asset that no longer exists, so the profile page rendered a broken image; now uses the stable `/assets/keller-solutions-logo.svg`
@@ -44,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Guard against missing `bin/bundler-audit` and `package.json` in reusable workflows
 - Default `.node-version` fallback when file does not exist
 
-[Unreleased]: https://github.com/keller-solutions/.github/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/keller-solutions/.github/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/keller-solutions/.github/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/keller-solutions/.github/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/keller-solutions/.github/releases/tag/v0.1.0
