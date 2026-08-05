@@ -1,0 +1,23 @@
+# This repository publishes the reusable workflows the rest of the org calls.
+# It should hold itself to the same process, so it calls its own release.yml
+# exactly the way every other repo does — by remote reference, not a local path,
+# so a break in the reusable workflow surfaces here first.
+#
+# Named self-release.yml rather than release.yml because the reusable workflow
+# already occupies that filename in this directory.
+
+name: Self Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: keller-solutions/.github/.github/workflows/release.yml@main
+    permissions:
+      contents: write

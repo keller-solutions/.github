@@ -1,0 +1,23 @@
+# Companion to self-release.yml. release.yml cuts a release from whatever
+# version sits at the top of CHANGELOG.md, so without this gate a PR could land
+# on main without a version bump and the release would silently no-op — which is
+# exactly what happened to 0.1.0 and 0.1.1, both written to the changelog and
+# never tagged.
+#
+# Named self-ci.yml because changelog-version-check.yml is the reusable workflow
+# this calls, and the two must not share a filename.
+
+name: Self CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changelog:
+    uses: keller-solutions/.github/.github/workflows/changelog-version-check.yml@main
