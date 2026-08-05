@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-05
+
 ### Fixed
 
 - Org profile logo pointed at a hashed Astro asset that no longer exists, so the profile page rendered a broken image; now uses the stable `/assets/keller-solutions-logo.svg`
