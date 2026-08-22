@@ -1,0 +1,11 @@
+name: Copilot review
+# Org pattern: keller-solutions/.github/.github/workflows/copilot-review.yml. Reviews once per
+# open (billed); add `synchronize` here and `re-review: true` below to review every push.
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened]
+permissions:
+  pull-requests: write
+jobs:
+  copilot:
+    uses: keller-solutions/.github/.github/workflows/copilot-review.yml@main
