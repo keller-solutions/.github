@@ -1,0 +1,69 @@
+name: Copilot Review
+
+# Reusable: asks GitHub Copilot to review a pull request the moment it is opened (or leaves
+# draft), and never asks twice for the same head commit, because Copilot reviews are billed.
+#
+# Caller (in any repo):
+#   name: Copilot review
+#   on:
+#     pull_request:
+#       types: [opened, ready_for_review, reopened]
+#   permissions:
+#     pull-requests: write
+#   jobs:
+#     copilot:
+#       uses: keller-solutions/.github/.github/workflows/copilot-review.yml@main
+#
+# Add `synchronize` to the caller's types (and set re-review: true) only for repos where every
+# push should get a fresh review; the default economises by reviewing once per open.
+
+on:
+  workflow_call:
+    inputs:
+      re-review:
+        description: "Request a fresh review on every push (billed per review); default is once per open"
+        required: false
+        type: boolean
+        default: false
+      reviewer:
+        description: "Reviewer login to request"
+        required: false
+        type: string
+        default: "copilot-pull-request-reviewer[bot]"
+
+jobs:
+  request:
+    name: Request Copilot review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Request the review
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          REVIEWER: ${{ inputs.reviewer }}
+          RE_REVIEW: ${{ inputs.re-review }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+            const reviewer = process.env.REVIEWER;
+            const login = reviewer.replace(/\[bot\]$/, "");
+
+            // Already reviewed this exact commit? Then there is nothing to ask for.
+            const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: pr.number });
+            const onHead = reviews.some((r) => r.user?.login === login && r.commit_id === pr.head.sha);
+            if (onHead) { core.info(`${reviewer} already reviewed ${pr.head.sha}; skipping.`); return; }
+
+            // Reviewed an earlier commit and the caller did not opt into re-reviews? Leave it.
+            const everReviewed = reviews.some((r) => r.user?.login === login);
+            if (everReviewed && process.env.RE_REVIEW !== "true") { core.info(`${reviewer} reviewed an earlier commit; re-review is off.`); return; }
+
+            try {
+              await github.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers: [reviewer] });
+              core.info(`Requested ${reviewer} on #${pr.number} (${pr.head.sha.slice(0, 7)}).`);
+            } catch (e) {
+              // Copilot not enabled on this repo, or the reviewer cannot be requested: say so, do not fail the PR.
+              core.warning(`Could not request ${reviewer}: ${e.message}. Is Copilot code review enabled for this repository?`);
+            }

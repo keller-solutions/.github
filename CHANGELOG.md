@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-21
+
+### Added
+
+- `copilot-review.yml` — reusable workflow that requests a GitHub Copilot review when a pull request is opened, leaves draft, or is reopened; skips if Copilot already reviewed the head commit, and only re-reviews on push when the caller opts in (`re-review: true`), since reviews are billed. First caller: ks-analytics-dashboard.
+
 ## [0.1.2] - 2026-08-05
 
 ### Fixed
