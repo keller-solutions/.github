@@ -1,0 +1,5 @@
+# Fixture for self-ci.yml. archive-tar-minitar 0.5.2 carries exactly one
+# advisory; ignoring it should make bundle-audit.yml pass only when the caller
+# opts in with honor-ignore-list: true.
+ignore:
+  - CVE-2016-10173

@@ -21,3 +21,82 @@ concurrency:
 jobs:
   changelog:
     uses: keller-solutions/.github/.github/workflows/changelog-version-check.yml@main
+
+  # The bundle-audit jobs call the workflow by local path, unlike the jobs above.
+  # A remote @main reference would test the old copy, or fail outright before the
+  # workflow first lands on main; a local path tests the code in this PR.
+  bundle-audit-clean:
+    name: bundle-audit / clean lockfile passes
+    uses: ./.github/workflows/bundle-audit.yml
+    with:
+      working-directory: test/fixtures/bundle-audit/clean
+
+  bundle-audit-ignore-list:
+    name: bundle-audit / opt-in ignore list is honored
+    uses: ./.github/workflows/bundle-audit.yml
+    with:
+      working-directory: test/fixtures/bundle-audit/vulnerable
+      honor-ignore-list: true
+      runs-on: '["ubuntu-latest"]'
+
+  # A called workflow that fails would turn this run red, and jobs that call a
+  # reusable workflow cannot set continue-on-error. So the strict default is
+  # proven by running bundle-audit.yml's own install and audit steps, plus its
+  # input defaults, all extracted verbatim, against the vulnerable fixture, whose
+  # .bundler-audit.yml must NOT apply. Only the `uses:` steps are copied by hand.
+  bundle-audit-strict-default:
+    name: bundle-audit / strict default fails on open advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: test/fixtures/bundle-audit/vulnerable
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd # v1
+        with:
+          working-directory: test/fixtures/bundle-audit/vulnerable
+
+      - name: Run the install and audit steps with default inputs and expect failure
+        run: |
+          set -euo pipefail
+          workflow="$GITHUB_WORKSPACE/.github/workflows/bundle-audit.yml"
+
+          default() { yq ".on.workflow_call.inputs.\"$1\".default" "$workflow"; }
+          BUNDLER_AUDIT_VERSION=$(default bundler-audit-version)
+          HONOR_IGNORE_LIST=$(default honor-ignore-list)
+          CONFIG_FILE=$(default config-file)
+          export BUNDLER_AUDIT_VERSION HONOR_IGNORE_LIST CONFIG_FILE
+
+          for id in install audit; do
+            yq ".jobs.audit.steps[] | select(.id == \"$id\") | .run" "$workflow" > "$RUNNER_TEMP/$id.sh"
+            if [ ! -s "$RUNNER_TEMP/$id.sh" ]; then
+              echo "::error::Could not extract the step with id '$id' from bundle-audit.yml"
+              exit 1
+            fi
+          done
+
+          bash "$RUNNER_TEMP/install.sh"
+
+          rc=0
+          bash "$RUNNER_TEMP/audit.sh" > "$RUNNER_TEMP/audit.log" 2>&1 || rc=$?
+          cat "$RUNNER_TEMP/audit.log"
+
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::bundle-audit.yml passed a lockfile with an open advisory under default inputs"
+            exit 1
+          fi
+          if ! grep -q 'CVE-2016-10173' "$RUNNER_TEMP/audit.log"; then
+            echo "::error::Audit failed, but not on the expected advisory CVE-2016-10173"
+            exit 1
+          fi
+          echo "Strict default failed on CVE-2016-10173 as expected"

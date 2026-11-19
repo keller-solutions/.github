@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-19
+
+### Added
+
+- Reusable workflow: `bundle-audit.yml` fails the build on any open advisory in `Gemfile.lock`. It installs bundler-audit itself, updates the advisory database on every run, reads Ruby from `.ruby-version`, and accepts `working-directory` and `runs-on` inputs for monorepos and self-hosted runners. Honoring a project's ignore list is opt-in through `honor-ignore-list`
+- `self-ci.yml` covers `bundle-audit.yml` against a clean fixture, the opt-in ignore list, and the strict default
+- Repository README documenting the reusable workflows and how to call them
+
+### Changed
+
+- `ruby-ci.yml` runs its gem scan by calling `bundle-audit.yml`, so the two cannot drift. `bin/bundler-audit` is no longer required. **Ignore lists no longer apply by default**: a project that relied on `.bundler-audit.yml` or `config/bundler-audit.yml` to pass must set `bundler-audit-honor-ignore-list: true` (and `bundler-audit-config-file` for the Rails 8 path). The gem scan now reports as its own job, `Bundle Audit`, and `Security Scan (Ruby)` runs only when Brakeman is enabled
+
 ## [0.1.3] - 2026-08-05
 
 ### Added
@@ -53,7 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Guard against missing `bin/bundler-audit` and `package.json` in reusable workflows
 - Default `.node-version` fallback when file does not exist
 
-[Unreleased]: https://github.com/keller-solutions/.github/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/keller-solutions/.github/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/keller-solutions/.github/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/keller-solutions/.github/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/keller-solutions/.github/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/keller-solutions/.github/compare/v0.1.0...v0.1.1
