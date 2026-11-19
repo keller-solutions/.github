@@ -41,16 +41,15 @@ jobs:
 
   # A called workflow that fails would turn this run red, and jobs that call a
   # reusable workflow cannot set continue-on-error. So the strict default is
-  # proven by running bundle-audit.yml's own audit step, extracted verbatim,
-  # against the vulnerable fixture, whose .bundler-audit.yml must NOT apply.
+  # proven by running bundle-audit.yml's own install and audit steps, plus its
+  # input defaults, all extracted verbatim, against the vulnerable fixture, whose
+  # .bundler-audit.yml must NOT apply. Only the `uses:` steps are copied by hand.
   bundle-audit-strict-default:
     name: bundle-audit / strict default fails on open advisory
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
-    env:
-      BUNDLER_AUDIT_VERSION: "0.9.3"
     defaults:
       run:
         shell: bash
@@ -67,27 +66,29 @@ jobs:
         with:
           working-directory: test/fixtures/bundle-audit/vulnerable
 
-      - name: Install bundler-audit
+      - name: Run the install and audit steps with default inputs and expect failure
         run: |
           set -euo pipefail
-          gem install bundler-audit --version "$BUNDLER_AUDIT_VERSION" --no-document
+          workflow="$GITHUB_WORKSPACE/.github/workflows/bundle-audit.yml"
 
-      - name: Run the audit step with default inputs and expect failure
-        env:
-          HONOR_IGNORE_LIST: "false"
-          CONFIG_FILE: .bundler-audit.yml
-        run: |
-          set -euo pipefail
-          script="$RUNNER_TEMP/audit.sh"
-          yq '.jobs.audit.steps[] | select(.id == "audit") | .run' \
-            "$GITHUB_WORKSPACE/.github/workflows/bundle-audit.yml" > "$script"
-          if [ ! -s "$script" ]; then
-            echo "::error::Could not extract the step with id 'audit' from bundle-audit.yml"
-            exit 1
-          fi
+          default() { yq ".on.workflow_call.inputs.\"$1\".default" "$workflow"; }
+          BUNDLER_AUDIT_VERSION=$(default bundler-audit-version)
+          HONOR_IGNORE_LIST=$(default honor-ignore-list)
+          CONFIG_FILE=$(default config-file)
+          export BUNDLER_AUDIT_VERSION HONOR_IGNORE_LIST CONFIG_FILE
+
+          for id in install audit; do
+            yq ".jobs.audit.steps[] | select(.id == \"$id\") | .run" "$workflow" > "$RUNNER_TEMP/$id.sh"
+            if [ ! -s "$RUNNER_TEMP/$id.sh" ]; then
+              echo "::error::Could not extract the step with id '$id' from bundle-audit.yml"
+              exit 1
+            fi
+          done
+
+          bash "$RUNNER_TEMP/install.sh"
 
           rc=0
-          bash "$script" > "$RUNNER_TEMP/audit.log" 2>&1 || rc=$?
+          bash "$RUNNER_TEMP/audit.sh" > "$RUNNER_TEMP/audit.log" 2>&1 || rc=$?
           cat "$RUNNER_TEMP/audit.log"
 
           if [ "$rc" -eq 0 ]; then

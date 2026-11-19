@@ -6,8 +6,9 @@
 #
 # bundler-audit reads `.bundler-audit.yml` automatically whenever it exists, so
 # the strict default works by pointing --config at an empty ignore list.
-# self-ci.yml extracts the step with id `audit` and runs it against a vulnerable
-# fixture to prove that, so keep that id and keep the script free of `${{ }}`.
+# self-ci.yml extracts the steps with ids `install` and `audit`, and the input
+# defaults, and runs them against a vulnerable fixture to prove that. Keep those
+# ids and keep both scripts free of `${{ }}`.
 
 name: Bundle Audit
 
@@ -68,6 +69,7 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
 
       - name: Install bundler-audit
+        id: install
         run: |
           set -euo pipefail
           gem install bundler-audit --version "$BUNDLER_AUDIT_VERSION" --no-document
