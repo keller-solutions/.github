@@ -1,0 +1,101 @@
+# Fails the build on any open advisory in a project's Gemfile.lock.
+#
+# Installs bundler-audit itself and never runs `bundle install`, so the caller
+# needs no bundler-audit in its Gemfile, no bin/bundler-audit, and no
+# credentials for private gem sources.
+#
+# bundler-audit reads `.bundler-audit.yml` automatically whenever it exists, so
+# the strict default works by pointing --config at an empty ignore list.
+# self-ci.yml extracts the step with id `audit` and runs it against a vulnerable
+# fixture to prove that, so keep that id and keep the script free of `${{ }}`.
+
+name: Bundle Audit
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: "Directory containing Gemfile.lock and .ruby-version, relative to the repo root (for monorepos)"
+        required: false
+        type: string
+        default: "."
+      runs-on:
+        description: 'Runner label, or a JSON array of labels for self-hosted runners (e.g. ''["self-hosted", "linux"]'')'
+        required: false
+        type: string
+        default: "ubuntu-latest"
+      honor-ignore-list:
+        description: "Apply the ignore list in config-file. Off by default: any open advisory fails the build."
+        required: false
+        type: boolean
+        default: false
+      config-file:
+        description: "bundler-audit config holding the ignore list, relative to working-directory. Read only when honor-ignore-list is true."
+        required: false
+        type: string
+        default: ".bundler-audit.yml"
+      bundler-audit-version:
+        description: "bundler-audit gem version to install"
+        required: false
+        type: string
+        default: "0.9.3"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Bundle Audit
+    runs-on: ${{ startsWith(inputs.runs-on, '[') && fromJSON(inputs.runs-on) || inputs.runs-on }}
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd # v1
+        with:
+          working-directory: ${{ inputs.working-directory }}
+
+      - name: Install bundler-audit
+        env:
+          BUNDLER_AUDIT_VERSION: ${{ inputs.bundler-audit-version }}
+        run: |
+          set -euo pipefail
+          gem install bundler-audit --version "$BUNDLER_AUDIT_VERSION" --no-document
+
+      - name: Check Gemfile.lock for open advisories
+        id: audit
+        env:
+          HONOR_IGNORE_LIST: ${{ inputs.honor-ignore-list }}
+          CONFIG_FILE: ${{ inputs.config-file }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -f Gemfile.lock ]; then
+            echo "::error::No Gemfile.lock in $PWD. Set working-directory to the directory that holds it."
+            exit 1
+          fi
+
+          if [ "$HONOR_IGNORE_LIST" = "true" ]; then
+            if [ ! -f "$CONFIG_FILE" ]; then
+              echo "::error::honor-ignore-list is true but $CONFIG_FILE does not exist in $PWD. Rails 8 apps keep it at config/bundler-audit.yml; set config-file to match."
+              exit 1
+            fi
+            config="$CONFIG_FILE"
+            echo "::notice::Honoring the ignore list in $CONFIG_FILE"
+          else
+            config="$RUNNER_TEMP/bundler-audit-no-ignores.yml"
+            printf 'ignore: []\n' > "$config"
+            if [ -f "$CONFIG_FILE" ]; then
+              echo "::notice::$CONFIG_FILE exists but is not applied. Every open advisory fails this check; set honor-ignore-list: true to apply its ignore list."
+            fi
+          fi
+
+          bundle-audit check --update --config "$config"
