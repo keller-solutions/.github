@@ -48,8 +48,12 @@ jobs:
     name: Bundle Audit
     runs-on: ${{ startsWith(inputs.runs-on, '[') && fromJSON(inputs.runs-on) || inputs.runs-on }}
     timeout-minutes: 10
+    env:
+      BUNDLER_AUDIT_VERSION: ${{ inputs.bundler-audit-version }}
     defaults:
       run:
+        # Explicit so a Windows runner label does not fall back to PowerShell.
+        shell: bash
         working-directory: ${{ inputs.working-directory }}
 
     steps:
@@ -64,8 +68,6 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
 
       - name: Install bundler-audit
-        env:
-          BUNDLER_AUDIT_VERSION: ${{ inputs.bundler-audit-version }}
         run: |
           set -euo pipefail
           gem install bundler-audit --version "$BUNDLER_AUDIT_VERSION" --no-document
@@ -98,4 +100,6 @@ jobs:
             fi
           fi
 
-          bundle-audit check --update --config "$config"
+          # The _version_ selector keeps a newer bundler-audit already present on a
+          # self-hosted runner from shadowing the pinned one.
+          bundle-audit "_${BUNDLER_AUDIT_VERSION}_" check --update --config "$config"

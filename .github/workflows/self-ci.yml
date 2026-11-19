@@ -49,8 +49,11 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    env:
+      BUNDLER_AUDIT_VERSION: "0.9.3"
     defaults:
       run:
+        shell: bash
         working-directory: test/fixtures/bundle-audit/vulnerable
 
     steps:
@@ -65,8 +68,6 @@ jobs:
           working-directory: test/fixtures/bundle-audit/vulnerable
 
       - name: Install bundler-audit
-        env:
-          BUNDLER_AUDIT_VERSION: "0.9.3"
         run: |
           set -euo pipefail
           gem install bundler-audit --version "$BUNDLER_AUDIT_VERSION" --no-document
