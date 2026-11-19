@@ -25,8 +25,11 @@ jobs:
   # The bundle-audit jobs call the workflow by local path, unlike the jobs above.
   # A remote @main reference would test the old copy, or fail outright before the
   # workflow first lands on main; a local path tests the code in this PR.
+  # The clean fixture pins an exact, recent Ruby patch (3.4.13) on ubuntu-latest.
+  # A stale ruby/setup-ruby pin does not know new patch releases or new runner
+  # images, which broke v0.2.0 for consumers; this job fails first when it does.
   bundle-audit-clean:
-    name: bundle-audit / clean lockfile passes
+    name: bundle-audit / clean lockfile passes on ubuntu-latest with Ruby 3.4.13
     uses: ./.github/workflows/bundle-audit.yml
     with:
       working-directory: test/fixtures/bundle-audit/clean
@@ -62,7 +65,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd # v1
+        uses: ruby/setup-ruby@f9c4492e86def3e644ab32a0ef185eda5b0c20d0 # v1.342.0
         with:
           working-directory: test/fixtures/bundle-audit/vulnerable
 

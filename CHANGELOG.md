@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-19
+
+### Fixed
+
+- Every `ruby/setup-ruby` pin moves from a February 2026 commit to v1.342.0 (`f9c4492`). The old pin did not recognize the `ubuntu-26.04` image that `ubuntu-latest` now uses, and it did not know Ruby 3.4.9 or newer on any hosted runner, so `bundle-audit.yml`, `ruby-ci.yml` and `rails-test.yml` failed for projects on current Ruby patches. The new pin also runs on Node 24
+- `self-ci.yml` audits a fixture pinned to Ruby 3.4.13 on `ubuntu-latest`, so a stale `setup-ruby` pin fails this repository's CI before a release
+
 ## [0.2.0] - 2026-11-19
 
 ### Added
@@ -65,7 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Guard against missing `bin/bundler-audit` and `package.json` in reusable workflows
 - Default `.node-version` fallback when file does not exist
 
-[Unreleased]: https://github.com/keller-solutions/.github/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/keller-solutions/.github/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/keller-solutions/.github/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/keller-solutions/.github/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/keller-solutions/.github/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/keller-solutions/.github/compare/v0.1.1...v0.1.2

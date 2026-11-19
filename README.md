@@ -26,7 +26,7 @@ on:
 
 jobs:
   bundle-audit:
-    uses: keller-solutions/.github/.github/workflows/bundle-audit.yml@v0.2.0
+    uses: keller-solutions/.github/.github/workflows/bundle-audit.yml@v0.2.1
 ```
 
 It installs bundler-audit itself and never runs `bundle install`. Your project does not need bundler-audit in its Gemfile, a `bin/bundler-audit`, or credentials for private gem sources. Ruby comes from your `.ruby-version`. The advisory database is updated on every run.
