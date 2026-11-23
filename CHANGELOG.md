@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-23
+
+### Changed
+
+- Added a Project management section to CONTRIBUTING.md: where tickets live, how to add one, and how agents get access.
+
 ## [0.2.1] - 2026-11-19
 
 ### Fixed
