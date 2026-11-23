@@ -80,3 +80,11 @@ Every review comment gets a response:
 - **If you disagree**: Reply with a clear rationale referencing relevant patterns or guidelines
 
 Never ignore feedback.
+
+## Project management
+
+- **Tracker:** GitHub Issues on [`keller-solutions/.github`](https://github.com/keller-solutions/.github/issues). Every change starts from an issue.
+- **Find work:** `gh issue list -R keller-solutions/.github`.
+- **Add a ticket:** `gh issue create -R keller-solutions/.github`. Write it as a user story (In order to / As a / I want) with testable acceptance criteria, and label it `bug` as fits. Security fixes get the `security` label and a `priority:` label.
+- **Link the work:** reference `#<number>` in commits and put `Closes #<number>` in the pull request body.
+- **Agent access:** agents use the GitHub CLI (`gh`) under the developer's own signed-in account (`gh auth status`); no extra token is needed. Keller Solutions agents follow the `managing-tickets` skill in the keller-solutions-core plugin.
